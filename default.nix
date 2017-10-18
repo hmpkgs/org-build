@@ -4,10 +4,10 @@ with lib;
 with builtins;
 
 rec {
-
-  build = { source }:
-  let
+  build = { source }: let
+    # the build uses emacs to perform the conversion
     env = { buildInputs = [ pkgs.emacs ]; };
+    # call make-init-el to convert the file
     script = ''
       ln -s "${source}" ./init.org;
       emacs -Q --script "${./org-build.el}" -f make-init-el;
@@ -15,10 +15,8 @@ rec {
     '';
   in pkgs.runCommand "org-build" env script;
 
-  module = { ... }:
-  let
-      cfg = config.programs.emacs.org-build;
-
+  module = let
+    cfg = config.programs.emacs.org-build;
   in {
     options.programs.emacs.org-build = {
       enable = mkEnableOption "Build init.el from Orgmode file";
