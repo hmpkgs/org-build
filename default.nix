@@ -1,30 +1,37 @@
 { config, pkgs, lib, ... }:
 
 with lib;
+with builtins;
 
-let
-  cfg = config.programs.orgBuild;
-  env = { buildInputs = [ pkgs.emacs ]; };
-  script = ''
-    ln -s "${cfg.source}" ./init.org;
-    emacs -Q --script "${./org-build.el}" -f make-init-el;
-    cp ./init.el $out;
-  '';
-  result = pkgs.runCommand "buildOrg" env script;
+rec {
 
-in {
+  build = { source }:
+  let
+    env = { buildInputs = [ pkgs.emacs ]; };
+    script = ''
+      ln -s "${source}" ./init.org;
+      emacs -Q --script "${./org-build.el}" -f make-init-el;
+      cp ./init.el $out;
+    '';
+  in pkgs.runCommand "org-build" env script;
 
-  options.programs.orgBuild = {
-    enable = mkEnableOption "Tangled Orgfile Configuration";
-    source = mkOption {
-      type = types.path;
-      description = ''
-      The source orgfile to build as init.el
-      '';
+  module = { ... }:
+  let
+      cfg = config.programs.emacs.org-build;
+
+  in {
+    options.programs.emacs.org-build = {
+      enable = mkEnableOption "Build init.el from Orgmode file";
+      source = mkOption {
+        type = types.path;
+        description = ''
+          The source orgfile to build as init.el
+        '';
+      };
     };
-  };
 
-  config = mkIf cfg.enable {
-    home.file.".emacs.d/init.el".source = result.outPath;
+    config = mkIf cfg.enable {
+      home.file.".emacs.d/init.el".source = build { source=cfg.source; };
+    };
   };
 }
